@@ -3,22 +3,26 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight } from 'expo-symbols';
 import React from 'react';
-import { OpaqueColorValue, StyleProp, ViewStyle } from 'react-native';
+import { OpaqueColorValue, StyleProp, TextStyle } from 'react-native';
 
-// Add your SFSymbol to MaterialIcons mappings here.
+// Map our custom names to exact MaterialIcons names
 const MAPPING = {
-  // See MaterialIcons here: https://icons.expo.fyi
-  // See SF Symbols in the SF Symbols app on Mac.
+  // Our simplified names
+  'map': 'map',
+  'calendar': 'event',
+  'add': 'add-circle',
+  'people': 'people',
+  'person': 'person',
+
+  // Original mappings
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-} as Partial<
-  Record<
-    import('expo-symbols').SymbolViewProps['name'],
-    React.ComponentProps<typeof MaterialIcons>['name']
-  >
->;
+  'plus.circle.fill': 'add-circle',
+  'person.2.fill': 'people',
+  'person.crop.circle': 'person',
+} as const;
 
 export type IconSymbolName = keyof typeof MAPPING;
 
@@ -36,8 +40,11 @@ export function IconSymbol({
   name: IconSymbolName;
   size?: number;
   color: string | OpaqueColorValue;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  // Get the corresponding MaterialIcons name
+  const materialName = MAPPING[name] as React.ComponentProps<typeof MaterialIcons>['name'];
+
+  return <MaterialIcons color={color} size={size} name={materialName} style={style} />;
 }

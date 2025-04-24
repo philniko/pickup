@@ -3,10 +3,10 @@ import { StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
-export default function MapScreen() {
+export default function EventsScreen() {
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">Map</ThemedText>
+      <ThemedText type="title">Events</ThemedText>
     </ThemedView>
   );
 }
