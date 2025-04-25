@@ -1,7 +1,7 @@
 import { Text, View, StyleSheet } from 'react-native';
 import COLORS from '../constants/colors';
 
-export default function FriendsScreen() {
+export default function EventsScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Events screen</Text>
