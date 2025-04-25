@@ -1,10 +1,10 @@
 import { Text, View, StyleSheet } from 'react-native';
 import COLORS from '../constants/colors';
 
-export default function ProfileScreen() {
+export default function SettingsScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Profile screen</Text>
+      <Text style={styles.text}>Settings screen</Text>
     </View>
   );
 }
@@ -12,11 +12,11 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.background, // Using the soft gray from our palette
     justifyContent: 'center',
     alignItems: 'center',
   },
   text: {
-    color: COLORS.text,
+    color: COLORS.text, // Using the dark navy from our palette
   },
 });

@@ -1,4 +1,5 @@
 import { Text, View, StyleSheet } from 'react-native';
+import COLORS from '../constants/colors';
 
 export default function FriendsScreen() {
   return (
@@ -11,11 +12,11 @@ export default function FriendsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#25292e',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   text: {
-    color: '#fff',
+    color: COLORS.text,
   },
 });
