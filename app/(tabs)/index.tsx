@@ -1,4 +1,4 @@
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import COLORS from '../constants/colors';
 import MapView, { Region, Marker } from 'react-native-maps';
 import { useEffect, useState } from 'react';
@@ -17,8 +17,11 @@ export default function Index() {
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          // Permission denied, will use default location
-          return;
+          Alert.alert(
+            'Permission Denied',
+            'Location permission is required to access your current location.',
+            [{ text: 'OK' }]
+          );
         }
         
         let location = await Location.getCurrentPositionAsync({});
@@ -31,8 +34,7 @@ export default function Index() {
           longitudeDelta: 0.0421,
         });
       } catch (error) {
-        console.log("Error getting location:", error);
-        // Will keep using default location
+        alert("Unable to retrieve your location. Using default location.");
       }
     }
     
