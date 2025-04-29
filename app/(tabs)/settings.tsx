@@ -1,5 +1,5 @@
 import { Text, View, StyleSheet } from 'react-native';
-import COLORS from '../constants/colors';
+import COLORS from '../../constants/colors';
 
 export default function SettingsScreen() {
   return (
