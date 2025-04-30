@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import COLORS from '../../constants/colors';
 
 export default function TabLayout() {
@@ -9,25 +9,11 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.text,
-        headerStyle: {
-          backgroundColor: 'white',
-        },
+        headerStyle: styles.headerStyle,
         headerShadowVisible: false,
         headerTintColor: COLORS.text,
-        tabBarStyle: {
-          backgroundColor: 'white',
-          height: 60,
-          borderTopWidth: 0,
-          elevation: 8,
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: -3 },
-          paddingBottom: 5,
-        },
-        tabBarLabelStyle: {
-          fontWeight: '500',
-          fontSize: 10,
-        },
+        tabBarStyle: styles.tabBarStyle,
+        tabBarLabelStyle: styles.tabBarLabelStyle,
       }}
     >
       <Tabs.Screen
@@ -56,23 +42,15 @@ export default function TabLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="index"
         options={{
           title: 'Map',
           tabBarIcon: ({ color, focused }) => (
-            <View style={{
-              width: 56,
-              height: 56,
-              backgroundColor: focused ? COLORS.secondary : '#e0e0e0',
-              borderRadius: 28,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 28,
-              borderWidth: 4,
-              borderColor: 'white',
-            }}>
+            <View style={[
+              styles.mapIconContainer,
+              { backgroundColor: focused ? COLORS.secondary : '#e0e0e0' }
+            ]}>
               <Ionicons
                 name={focused ? 'map' : 'map-outline'}
                 color={focused ? 'white' : COLORS.text}
@@ -80,9 +58,7 @@ export default function TabLayout() {
               />
             </View>
           ),
-          tabBarItemStyle: {
-            height: 60,
-          }
+          tabBarItemStyle: styles.mapTabBarItemStyle
         }}
       />
       <Tabs.Screen
@@ -114,3 +90,36 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerStyle: {
+    backgroundColor: 'white',
+  },
+  tabBarStyle: {
+    backgroundColor: 'white',
+    height: 70,
+    borderTopWidth: 0,
+    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -3 },
+    paddingBottom: 5,
+  },
+  tabBarLabelStyle: {
+    fontWeight: '500',
+    fontSize: 10,
+  },
+  mapIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 28,
+    borderWidth: 4,
+    borderColor: 'white',
+  },
+  mapTabBarItemStyle: {
+    height: 60,
+  }
+});
