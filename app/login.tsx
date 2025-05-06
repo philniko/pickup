@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View, TextInput, TouchableOpacity, Text, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, Dimensions, Image, ScrollView } from 'react-native';
+import {
+  Alert, StyleSheet, View, TextInput, TouchableOpacity, Text, KeyboardAvoidingView,
+  Platform, SafeAreaView, StatusBar, Dimensions, Image, ScrollView, Keyboard
+} from 'react-native';
 import { supabase } from '../utils/supabase';
 import { Stack } from 'expo-router';
 import COLORS from '../constants/colors';
@@ -13,10 +16,27 @@ export default function Login() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isLogin, setIsLogin] = useState(true); // Toggle between login and register, default to Create Account
+  const [isLogin, setIsLogin] = useState(true);
+
+  // Helper function to clear all fields
+  const clearAllFields = () => {
+    setEmail('');
+    setPassword('');
+    setFirstName('');
+    setLastName('');
+  };
+
+  // Helper function to switch between login and register modes
+  const toggleAuthMode = () => {
+    setIsLogin(!isLogin);
+    clearAllFields(); // Clear fields when switching modes
+  };
 
   async function handleSignUp() {
-    // Validate all required fields for signup
+    // Dismiss keyboard first
+    Keyboard.dismiss();
+
+    // Basic validations
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password');
       return;
@@ -27,6 +47,19 @@ export default function Login() {
       return;
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    // Password strength validation
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -34,7 +67,6 @@ export default function Login() {
         email,
         password,
         options: {
-          // Only use window.location on web platforms
           emailRedirectTo: Platform.OS === 'web' ? window.location?.origin : undefined,
           data: {
             first_name: firstName,
@@ -45,26 +77,50 @@ export default function Login() {
       });
 
       if (error) {
-        Alert.alert('Error', error.message || 'Failed to sign up. Please try again.');
+        // Check for specific error messages related to duplicate email
+        if (error.message?.includes('email already') ||
+          error.message?.includes('already in use') ||
+          error.message?.includes('already taken') ||
+          error.message?.includes('already registered') ||
+          error.code === '23505') { // PostgreSQL unique violation error code
+          Alert.alert('Error', 'This email is already registered. Please use a different email or sign in.');
+        } else {
+          Alert.alert('Error', error.message || 'Failed to sign up. Please try again.');
+        }
       } else if (data?.user) {
-        // Show success message and then switch to login view
-        Alert.alert(
-          'Success',
-          'Verification email sent! Please check your email to confirm your account.',
-          [
-            {
+        // Success case - check if user is confirmed or needs confirmation
+        if (data.user.identities && data.user.identities.length === 0) {
+          // This can indicate the email is already registered
+          Alert.alert('Error', 'This email is already registered. Please use a different email or sign in.');
+        } else {
+          Alert.alert(
+            'Success',
+            'Verification email sent! Please check your email to confirm your account.',
+            [{
               text: 'OK',
               onPress: () => {
-                // Switch to login view
-                setIsLogin(true);
-                // Optionally pre-fill the email for convenience
-                // (password field will be empty for security reasons)
+                clearAllFields(); // Clear all fields on success
+                setIsLogin(true); // Switch to login mode
               }
+            }]
+          );
+        }
+      } else {
+        // Handle the edge case where neither error nor user is returned
+        Alert.alert(
+          'Note',
+          'Please check your email to complete the sign-up process.',
+          [{
+            text: 'OK',
+            onPress: () => {
+              clearAllFields(); // Clear fields
+              setIsLogin(true); // Switch to login
             }
-          ]
+          }]
         );
       }
     } catch (e) {
+      console.error(e);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -72,6 +128,9 @@ export default function Login() {
   }
 
   async function handleSignIn() {
+    // Dismiss keyboard first
+    Keyboard.dismiss();
+
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password');
       return;
@@ -87,6 +146,9 @@ export default function Login() {
 
       if (error) {
         Alert.alert('Error', error.message || 'Failed to sign in. Please try again.');
+      } else {
+        // Clear fields after successful login
+        clearAllFields();
       }
     } catch (e) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
@@ -106,6 +168,7 @@ export default function Login() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled" // Important for button press with keyboard open
         >
           <View style={styles.container}>
             {/* Logo and Header - clean design without wave */}
@@ -213,7 +276,7 @@ export default function Login() {
               {/* Toggle Login/Register */}
               <TouchableOpacity
                 style={styles.toggleButton}
-                onPress={() => setIsLogin(!isLogin)}
+                onPress={toggleAuthMode}
               >
                 <Text style={styles.toggleTextPrefix}>
                   {isLogin ? "Don't have an account? " : "Already have an account? "}
