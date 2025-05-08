@@ -1,7 +1,7 @@
 import { View, StyleSheet, Alert, Text, ActivityIndicator } from 'react-native';
 import COLORS from '../../constants/colors';
 import MapView, { Region, Marker, Callout } from 'react-native-maps';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import * as Location from 'expo-location';
 import CreateEventPopup from '../../components/CreateEventPopup';
 import CreateEventWizard from '../../components/CreateEventWizard';
@@ -42,8 +42,10 @@ export default function Index() {
   // State for events from database
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
-  const [mapKey, setMapKey] = useState(1); // Key to force map re-renders
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  // Optimization for marker tracking
+  const [markerTracking, setMarkerTracking] = useState(true);
 
   // Add ref for tracking pending marker state
   const pendingMarkerRef = useRef(false);
@@ -79,9 +81,6 @@ export default function Index() {
         console.log(`Successfully fetched ${data.length} events`);
         setEvents(data as Event[]);
 
-        // Force map to re-render when events change
-        setMapKey(prevKey => prevKey + 1);
-
         // Mark initial load as complete
         if (!initialLoadDone) {
           setInitialLoadDone(true);
@@ -110,14 +109,6 @@ export default function Index() {
     setEvents(prevEvents => {
       const updatedEvents = [...prevEvents, newEvent];
       console.log(`Events array updated, now contains ${updatedEvents.length} events`);
-
-      // Force map to re-render with new event
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          setMapKey(prevKey => prevKey + 1);
-        }
-      }, 100);
-
       return updatedEvents;
     });
   }, []);
@@ -175,6 +166,15 @@ export default function Index() {
     };
   }, []);
 
+  // Turn off marker tracking after initial render
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMarkerTracking(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // Separate useEffect for fetching events on initial load
   useEffect(() => {
     console.log('Initial events load');
@@ -199,38 +199,12 @@ export default function Index() {
         console.log('Supabase subscription status:', status);
       });
 
-    // Set up an interval to periodically check for events (as a fallback)
-    const intervalId = setInterval(() => {
-      if (!isLoadingEvents && isScreenFocused.current) {
-        console.log('Periodic events refresh');
-        fetchEvents();
-      }
-    }, 15000); // Check every 15 seconds
-
-    // Cleanup subscription and interval on unmount
+    // Cleanup subscription on unmount
     return () => {
-      console.log('Cleaning up subscriptions and intervals');
+      console.log('Cleaning up subscriptions');
       eventsSubscription.unsubscribe();
-      clearInterval(intervalId);
     };
   }, [fetchEvents]);
-
-  // Additional effect for debugging and forcing re-renders
-  useEffect(() => {
-    // After events are loaded, force a map refresh after a short delay
-    if (events.length > 0 && !isLoadingEvents) {
-      console.log(`Events state updated with ${events.length} events`);
-
-      const timeoutId = setTimeout(() => {
-        if (isMountedRef.current) {
-          console.log('Forcing map re-render');
-          setMapKey(prevKey => prevKey + 1);
-        }
-      }, 500); // Short delay to ensure state is settled
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [events, isLoadingEvents]);
 
   // Effect to reset pending marker flag when selectedLocation changes
   useEffect(() => {
@@ -309,6 +283,65 @@ export default function Index() {
     return sportIcons[sport] || 'fitness-outline';
   };
 
+  // Memoize event markers for better performance
+  const eventMarkers = useMemo(() => {
+    return events.map((event) => (
+      <Marker
+        key={`event-${event.id}`}
+        coordinate={{
+          latitude: event.latitude,
+          longitude: event.longitude
+        }}
+        tracksViewChanges={markerTracking}
+      >
+        <View style={[styles.eventMarkerDot, styles.existingEventMarker]}>
+          <Ionicons
+            name={getSportIcon(event.sport) as any}
+            size={12}
+            color="#FFFFFF"
+          />
+        </View>
+
+        <Callout tooltip style={styles.calloutContainer}>
+          <View style={styles.callout}>
+            <Text style={styles.calloutTitle}>{event.name}</Text>
+            <View style={styles.calloutDetail}>
+              <Ionicons
+                name={getSportIcon(event.sport) as any}
+                size={14}
+                color={COLORS.text}
+                style={styles.calloutIcon}
+              />
+              <Text style={styles.calloutText}>{event.sport}</Text>
+            </View>
+            <View style={styles.calloutDetail}>
+              <Ionicons
+                name="calendar"
+                size={14}
+                color={COLORS.text}
+                style={styles.calloutIcon}
+              />
+              <Text style={styles.calloutText}>
+                {formatEventDate(event.datetime)}
+              </Text>
+            </View>
+            <View style={styles.calloutDetail}>
+              <Ionicons
+                name="people"
+                size={14}
+                color={COLORS.text}
+                style={styles.calloutIcon}
+              />
+              <Text style={styles.calloutText}>
+                {event.max_players} players
+              </Text>
+            </View>
+          </View>
+        </Callout>
+      </Marker>
+    ));
+  }, [events, markerTracking]);
+
   return (
     <View style={styles.container}>
       {/* Show a loading indicator while fetching events on initial load */}
@@ -320,7 +353,6 @@ export default function Index() {
       )}
 
       <MapView
-        key={`map-${mapKey}`} // This forces the map to re-render when events change
         style={styles.map}
         region={region}
         onLongPress={handleMapPress}
@@ -339,7 +371,7 @@ export default function Index() {
             latitude: region.latitude,
             longitude: region.longitude
           }}
-          tracksViewChanges={false}
+          tracksViewChanges={markerTracking}
         >
           <View style={styles.userMarkerContainer}>
             <View style={styles.userMarkerDot} />
@@ -350,69 +382,15 @@ export default function Index() {
         {selectedLocation && (
           <Marker
             coordinate={selectedLocation}
-            tracksViewChanges={false}
+            tracksViewChanges={markerTracking}
             anchor={{ x: 0.5, y: 0.5 }}
           >
             <View style={styles.eventMarkerDot} />
           </Marker>
         )}
 
-        {/* Event markers from database */}
-        {events.map((event) => (
-          <Marker
-            key={`event-${event.id}-${mapKey}`}
-            coordinate={{
-              latitude: event.latitude,
-              longitude: event.longitude
-            }}
-            tracksViewChanges={false}
-          >
-            <View style={[styles.eventMarkerDot, styles.existingEventMarker]}>
-              <Ionicons
-                name={getSportIcon(event.sport) as any}
-                size={12}
-                color="#FFFFFF"
-              />
-            </View>
-
-            <Callout tooltip style={styles.calloutContainer}>
-              <View style={styles.callout}>
-                <Text style={styles.calloutTitle}>{event.name}</Text>
-                <View style={styles.calloutDetail}>
-                  <Ionicons
-                    name={getSportIcon(event.sport) as any}
-                    size={14}
-                    color={COLORS.text}
-                    style={styles.calloutIcon}
-                  />
-                  <Text style={styles.calloutText}>{event.sport}</Text>
-                </View>
-                <View style={styles.calloutDetail}>
-                  <Ionicons
-                    name="calendar"
-                    size={14}
-                    color={COLORS.text}
-                    style={styles.calloutIcon}
-                  />
-                  <Text style={styles.calloutText}>
-                    {formatEventDate(event.datetime)}
-                  </Text>
-                </View>
-                <View style={styles.calloutDetail}>
-                  <Ionicons
-                    name="people"
-                    size={14}
-                    color={COLORS.text}
-                    style={styles.calloutIcon}
-                  />
-                  <Text style={styles.calloutText}>
-                    {event.max_players} players
-                  </Text>
-                </View>
-              </View>
-            </Callout>
-          </Marker>
-        ))}
+        {/* Event markers from database - now memoized */}
+        {eventMarkers}
       </MapView>
 
       {/* Create Event Popup */}
